@@ -1,4 +1,3 @@
 ujson~=5.10.0
 sanic~=24.12.0
-pyld~=2.0.4
 buttplug-py~=0.2.0

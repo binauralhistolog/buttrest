@@ -16,9 +16,9 @@ conda config --set auto_activate_base false
 Create a buttrest environment for conda:
 
 ```bash
-conda create -n buttrest
+conda create -n buttrest -y
 conda activate buttrest
-conda install pip
+conda install pip -y
 ```
 
 And then you can check out the project and install the requirements.  This will install  [buttplug-py](https://github.com/Siege-Wizard/buttplug-py), [sanic](https://sanic.dev/en/), pyld, and ujson.
