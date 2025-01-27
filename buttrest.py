@@ -162,16 +162,83 @@ def pydantic_serializer(obj):
         return obj.model_dump(by_alias=True)
     raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
+my_log_config = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        # Console handlers with colors
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "colored",
+            "stream": "ext://sys.stdout",
+        },
+        # File handlers without colors
+        "access_file": {
+            "class": "logging.FileHandler",
+            "filename": "access.log",
+            "formatter": "plain_access",
+        },
+        "error_file": {
+            "class": "logging.FileHandler",
+            "filename": "error.log",
+            "formatter": "plain_generic",
+        },
+        "root_file": {
+            "class": "logging.FileHandler",
+            "filename": "internal.log",
+            "formatter": "plain_generic",
+        }
+    },
+    "formatters": {
+        # Colored console formats
+        "colored": {
+            "class": "sanic.logging.formatter.AutoFormatter",
+            "colorize": True,
+            "format": "%(asctime)s [%(levelname)s] [%(name)s]: %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+        "colored_access": {
+            "class": "sanic.logging.formatter.AutoAccessFormatter",
+            "colorize": True,
+            "format": "%(asctime)s - (%(name)s)[%(levelname)s][%(host)s]: %(request)s %(message)s %(status)d %(byte)d",
+        },
+        # Plain file formats (no ANSI)
+        "plain_generic": {
+            "format": "%(asctime)s [%(levelname)s] [%(name)s]: %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+            "class": "logging.Formatter",
+        },
+        "plain_access": {
+            "format": "%(asctime)s - (%(name)s)[%(levelname)s][%(host)s]: %(request)s %(message)s %(status)d %(byte)d",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+            "class": "logging.Formatter",
+        }
+    },
+    "loggers": {
+        "sanic.root": {
+            "level": "INFO",
+            "handlers": ["console", "root_file"],
+        },
+        "sanic.error": {
+            "level": "ERROR",
+            "handlers": ["console", "error_file"],
+        },
+        "sanic.access": {
+            "level": "INFO",
+            "handlers": ["console", "access_file"],
+            "propagate": False,  # Disable default Sanic access logging
+        }
+    }
+}
 
 app = Sanic(
     "ButtRest",
     env_prefix="BUTTREST_",
     dumps=lambda obj: ujson.dumps(obj, default=pydantic_serializer),
+    log_config=my_log_config
 )
 app.config.CLIENT_NAME = "ButtRest"
 app.config.FALLBACK_ERROR_FORMAT = "json"
-# logging.basicConfig(level=logging.DEBUG)
-
 
 @app.exception(SanicExtValidationError)
 async def handle_validation_error(request, exception: SanicExtValidationError):
@@ -238,9 +305,9 @@ def jsonld(body: Any, status: int = 200):
 async def before_server_start(app):
     # export BUTTREST_CLIENT_NAME=myclientname
     client = Client(app.config.CLIENT_NAME, ProtocolSpec.v3)
-    client_logger = logging.getLogger(app.config.CLIENT_NAME)
     if app.debug:
-        client_logger.setLevel(level=logging.DEBUG)
+        logger.info("Setting client logger to DEBUG level")
+        client.logger.setLevel(level=logging.DEBUG)
 
     # export BUTTREST_INTIFACE_URL=ws://localhost:12345
     connector = WebsocketConnector(app.config.INTIFACE_URL, logger=client.logger)
@@ -612,11 +679,11 @@ def render_actuator(device_id, actuator: Actuator):
 # Commands
 
 
-# sanic server:app exec rotary --device=0 --actuator=0 --intensity=0.5 --duration=10
-@app.command(name="rotary")
-async def rotary(device: int, actuator: int, intensity: int, duration: int = 1):
+# sanic server:app exec test_command --device=0 --actuator=0 --intensity=0.5 --duration=10
+@app.command(name="test_command")
+async def test_command(device: int, actuator: int, intensity: int, duration: int = 1):
     logger.debug(
-        f"rotary: device={device} device={actuator} device={intensity} duration={duration}"
+        f"test_command: device={device} device={actuator} device={intensity} duration={duration}"
     )
 
     # exec does not call before_server_start
@@ -627,17 +694,17 @@ async def rotary(device: int, actuator: int, intensity: int, duration: int = 1):
 
     device_index = int(device)
     selected_device = client.devices[device_index]
-    logger.debug(f"rotary: selected_device={selected_device}")
+    logger.debug(f"test_command: selected_device={selected_device}")
 
     actuator_index = int(actuator)
     selected_actuator = selected_device.actuators[actuator_index]
-    logger.debug(f"rotary: selected_actuator={selected_actuator}")
+    logger.debug(f"test_command: selected_actuator={selected_actuator}")
 
     selected_intensity = float(intensity)
     await selected_actuator.command(selected_intensity)
 
     selected_duration = int(duration)
-    logger.debug(f"rotary: selected_duration={selected_duration} seconds")
+    logger.debug(f"test_command: selected_duration={selected_duration} seconds")
 
     await asyncio.sleep(selected_duration)
 
