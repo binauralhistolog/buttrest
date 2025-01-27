@@ -6,10 +6,10 @@ There is no authentication or authorization around the REST API.  You may want t
 
 ## Install anaconda (optional)
 
-Python can be a bit odd, so you may want to use [miniconda](https://docs.anaconda.com/miniconda/) to isolate packages that you install.  Assuming that you're on MacOS:
+Python can be a bit odd, so you may want to use [miniconda](https://docs.anaconda.com/miniconda/) or [miniforge](https://github.com/conda-forge/miniforge) to isolate packages that you install.  Assuming that you're on MacOS:
 
 ```bash
-brew install miniconda
+brew install miniforge
 conda config --set auto_activate_base false
 ```
 
